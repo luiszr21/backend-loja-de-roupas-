@@ -1,6 +1,12 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import authRoutes from './routes/auth.routes'
+import produtoRoutes from './routes/produto.routes'
+import categoriaRoutes from './routes/categoria.routes'
+
+
+
 
 dotenv.config()
 
@@ -8,11 +14,15 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors({
-  origin: 'http://localhost:5173' // porta padrão do Vite/React
+  origin: 'http://localhost:5173'
 }))
 app.use(express.json())
 
-// Rota de teste
+app.use('/auth', authRoutes)
+
+app.use('/produtos', produtoRoutes)
+app.use('/categorias', categoriaRoutes)
+
 app.get('/', (req, res) => {
   res.json({ message: 'API Loja de Roupas funcionando! 👗' })
 })
