@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import 'dotenv/config'  
 
 export const autenticarCliente = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization
@@ -13,7 +14,8 @@ export const autenticarCliente = (req: Request, res: Response, next: NextFunctio
 
     if (decoded.tipo !== 'cliente') return res.status(403).json({ erro: 'Acesso negado' })
 
-    req.body.usuarioId = decoded.id
+      req.headers['usuarioId'] = decoded.id
+
     next()
   } catch {
     return res.status(401).json({ erro: 'Token inválido ou expirado' })
@@ -22,6 +24,7 @@ export const autenticarCliente = (req: Request, res: Response, next: NextFunctio
 
 export const autenticarAdmin = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization
+
 
   if (!authHeader) return res.status(401).json({ erro: 'Token não fornecido' })
 
@@ -32,9 +35,10 @@ export const autenticarAdmin = (req: Request, res: Response, next: NextFunction)
 
     if (decoded.tipo !== 'admin') return res.status(403).json({ erro: 'Acesso negado' })
 
-    req.body.adminId = decoded.id
+    req.headers['adminId'] = decoded.id
     next()
-  } catch {
+  } catch (error) {
     return res.status(401).json({ erro: 'Token inválido ou expirado' })
   }
 }
+

@@ -58,7 +58,7 @@ backend/
 git clone https://github.com/seu-usuario/loja-roupas.git
  
 # Entre na pasta do backend
-cd backend
+cd backend-loja-roupas
  
 # Instale as dependências
 npm install
