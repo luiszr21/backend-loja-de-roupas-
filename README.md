@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Projeto** | Loja de Roupas — Backend |
-| **Disciplina** | Linguagens de Programação Emergentes |
+| **Disciplina** | Programação full stack |
 | **Professor** | Edécio Fernando Iepsen |
 | **Integrantes** | Luis e Vicente |
 | **Apresentação** | 07/05/2026 |
