@@ -8,109 +8,69 @@ datasource db {
 }
 
 model Admin {
-  id          String   @id @default(uuid())
-  nome        String
-  email       String   @unique
-  senha       String
-  criadoEm   DateTime @default(now())
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  criadoEm DateTime @default(now())
 }
 
 model Usuario {
-  id          String     @id @default(uuid())
-  nome        String
-  email       String     @unique
-  senha       String
-  criadoEm   DateTime   @default(now())
+  id        String     @id @default(uuid())
+  nome      String
+  email     String     @unique
+  senha     String
+  criadoEm DateTime   @default(now())
 
-  enderecos   Endereco[]
-  carrinhos   Carrinho[]
-  pedidos     Pedido[]
+  enderecos Endereco[]
+  propostas Proposta[]
 }
 
 model Endereco {
-  id          String   @id @default(uuid())
-  usuarioId   String
-  rua         String
-  numero      String
-  cidade      String
-  estado      String
-  cep         String
-  criadoEm   DateTime @default(now())
+  id        String   @id @default(uuid())
+  usuarioId String
+  rua       String
+  numero    String
+  cidade    String
+  estado    String
+  cep       String
+  criadoEm DateTime @default(now())
 
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
 }
 
 model Categoria {
-  id        String     @id @default(uuid())
-  nome      String
-  produtos  Produto[]
+  id       String    @id @default(uuid())
+  nome     String
+  produtos Produto[]
 }
 
 model Produto {
-  id            String          @id @default(uuid())
-  categoriaId   String
-  nome          String
-  descricao     String?
-  preco         Float
-  estoque       Int
-  tamanho       String          // ex: "P", "M", "G", "GG"
-  imagemUrl     String?
-  destaque      Boolean         @default(false)
-  criadoEm     DateTime        @default(now())
+  id          String     @id @default(uuid())
+  categoriaId String
+  nome        String
+  descricao   String?
+  preco       Float
+  estoque     Int
+  tamanho     String
+  imagemUrl   String?
+  destaque    Boolean    @default(false)
+  criadoEm   DateTime   @default(now())
 
-  categoria     Categoria       @relation(fields: [categoriaId], references: [id])
-  itensPedido   ItemPedido[]
-  itensCarrinho ItemCarrinho[]
+  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
+  propostas   Proposta[]
 }
 
-model Carrinho {
-  id          String         @id @default(uuid())
-  usuarioId   String
-  criadoEm   DateTime       @default(now())
+model Proposta {
+  id        String   @id @default(uuid())
+  usuarioId String
+  produtoId String
+  mensagem  String
+  resposta  String?
+  status    String   @default("pendente")
+  criadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
-  usuario     Usuario        @relation(fields: [usuarioId], references: [id])
-  itens       ItemCarrinho[]
-}
-
-model ItemCarrinho {
-  id          String   @id @default(uuid())
-  carrinhoId  String
-  produtoId   String
-  quantidade  Int
-
-  carrinho    Carrinho @relation(fields: [carrinhoId], references: [id])
-  produto     Produto  @relation(fields: [produtoId], references: [id])
-}
-
-model Pedido {
-  id          String       @id @default(uuid())
-  usuarioId   String
-  status      String       @default("pendente") // pendente, confirmado, cancelado
-  valorTotal  Float
-  dataPedido  DateTime     @default(now())
-
-  usuario     Usuario      @relation(fields: [usuarioId], references: [id])
-  itens       ItemPedido[]
-  pagamento   Pagamento?
-}
-
-model ItemPedido {
-  id          String  @id @default(uuid())
-  pedidoId    String
-  produtoId   String
-  quantidade  Int
-  precoUnitario Float
-
-  pedido      Pedido  @relation(fields: [pedidoId], references: [id])
-  produto     Produto @relation(fields: [produtoId], references: [id])
-}
-
-model Pagamento {
-  id             String   @id @default(uuid())
-  pedidoId       String   @unique
-  tipoPagamento  String   // ex: "pix", "cartao", "boleto"
-  status         String   @default("pendente")
-  dataPagamento  DateTime @default(now())
-
-  pedido         Pedido   @relation(fields: [pedidoId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  produto   Produto  @relation(fields: [produtoId], references: [id])
 }
