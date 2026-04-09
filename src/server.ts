@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/auth.routes'
 import produtoRoutes from './routes/produto.routes'
 import categoriaRoutes from './routes/categoria.routes'
-import pedidoRoutes from './routes/pedido.routes'
+import propostaRoutes from './routes/proposta.routes'
 
 
 
@@ -23,7 +23,7 @@ app.use('/auth', authRoutes)
 
 app.use('/produtos', produtoRoutes)
 app.use('/categorias', categoriaRoutes)
-app.use('/pedidos', pedidoRoutes)
+app.use('/propostas', propostaRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Loja de Roupas funcionando! 👗' })
