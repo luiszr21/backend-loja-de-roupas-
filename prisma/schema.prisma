@@ -12,7 +12,7 @@ model Admin {
   nome      String
   email     String   @unique
   senha     String
-  criadoEm DateTime @default(now())
+  criadoEm  DateTime @default(now())
 }
 
 model Usuario {
@@ -20,7 +20,7 @@ model Usuario {
   nome      String
   email     String     @unique
   senha     String
-  criadoEm DateTime   @default(now())
+  criadoEm  DateTime   @default(now())
 
   enderecos Endereco[]
   propostas Proposta[]
@@ -34,9 +34,11 @@ model Endereco {
   cidade    String
   estado    String
   cep       String
-  criadoEm DateTime @default(now())
+  criadoEm  DateTime @default(now())
 
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
 }
 
 model Categoria {
@@ -46,31 +48,36 @@ model Categoria {
 }
 
 model Produto {
-  id          String     @id @default(uuid())
-  categoriaId String
+  id          String    @id @default(uuid())
+  categoriaId String?
   nome        String
   descricao   String?
   preco       Float
   estoque     Int
   tamanho     String
   imagemUrl   String?
-  destaque    Boolean    @default(false)
-  criadoEm   DateTime   @default(now())
+  destaque    Boolean   @default(false)
+  criadoEm    DateTime  @default(now())
 
-  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
   propostas   Proposta[]
+
+  @@index([categoriaId])
 }
 
 model Proposta {
-  id        String   @id @default(uuid())
-  usuarioId String
-  produtoId String
-  mensagem  String
-  resposta  String?
-  status    String   @default("pendente")
-  criadoEm DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  id            String    @id @default(uuid())
+  usuarioId     String
+  produtoId     String
+  mensagem      String
+  resposta      String?
+  status        String    @default("pendente")
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
 
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
-  produto   Produto  @relation(fields: [produtoId], references: [id])
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id])
+  produto       Produto   @relation(fields: [produtoId], references: [id])
+
+  @@index([usuarioId])
+  @@index([produtoId])
 }
