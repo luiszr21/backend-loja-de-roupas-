@@ -1,44 +1,98 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import prisma from '../lib/prisma'
 import 'dotenv/config'  
 
-export const autenticarCliente = (req: Request, res: Response, next: NextFunction) => {
+type Role = 'user' | 'admin'
+
+type TokenPayload = {
+  id: string
+  role?: Role
+  tipo?: string
+  jti?: string
+  exp?: number
+}
+
+const extrairRole = (payload: TokenPayload): Role | null => {
+  if (payload.role === 'user' || payload.role === 'admin') {
+    return payload.role
+  }
+
+  // Compatibilidade com tokens antigos
+  if (payload.tipo === 'cliente') return 'user'
+  if (payload.tipo === 'admin') return 'admin'
+
+  return null
+}
+
+const validarToken = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization
 
-  if (!authHeader) return res.status(401).json({ erro: 'Token não fornecido' })
+  if (!authHeader) {
+    res.status(401).json({ erro: 'Token não fornecido' })
+    return null
+  }
 
-  const token = authHeader.split(' ')[1] // formato: "Bearer token"
+  const [scheme, token] = authHeader.split(' ')
+  if (scheme !== 'Bearer' || !token) {
+    res.status(401).json({ erro: 'Token inválido ou expirado' })
+    return null
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string, tipo: string }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as TokenPayload
+    const role = extrairRole(decoded)
 
-    if (decoded.tipo !== 'cliente') return res.status(403).json({ erro: 'Acesso negado' })
+    if (!decoded.id || !role || !decoded.jti || !decoded.exp) {
+      res.status(401).json({ erro: 'Token inválido ou expirado' })
+      return null
+    }
 
-      req.headers['usuarioId'] = decoded.id
+    const tokenRevogado = await prisma.tokenRevogado.findUnique({
+      where: { jti: decoded.jti }
+    })
 
-    next()
+    if (tokenRevogado) {
+      res.status(401).json({ erro: 'Token inválido ou expirado' })
+      return null
+    }
+
+    return { id: decoded.id, role, jti: decoded.jti, exp: decoded.exp }
   } catch {
-    return res.status(401).json({ erro: 'Token inválido ou expirado' })
+    res.status(401).json({ erro: 'Token inválido ou expirado' })
+    return null
   }
 }
 
-export const autenticarAdmin = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization
+export const autenticarCliente = async (req: Request, res: Response, next: NextFunction) => {
+  const auth = await validarToken(req, res)
+  if (!auth) return
 
-
-  if (!authHeader) return res.status(401).json({ erro: 'Token não fornecido' })
-
-  const token = authHeader.split(' ')[1]
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string, tipo: string }
-
-    if (decoded.tipo !== 'admin') return res.status(403).json({ erro: 'Acesso negado' })
-
-    req.headers['adminId'] = decoded.id
-    next()
-  } catch (error) {
-    return res.status(401).json({ erro: 'Token inválido ou expirado' })
+  if (auth.role !== 'user') {
+    return res.status(403).json({ erro: 'Acesso negado' })
   }
+
+  res.locals.auth = auth
+  next()
+}
+
+export const autenticarUsuario = async (req: Request, res: Response, next: NextFunction) => {
+  const auth = await validarToken(req, res)
+  if (!auth) return
+
+  res.locals.auth = auth
+  next()
+}
+
+export const autenticarAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  const auth = await validarToken(req, res)
+  if (!auth) return
+
+  if (auth.role !== 'admin') {
+    return res.status(403).json({ erro: 'Acesso negado' })
+  }
+
+  res.locals.auth = auth
+  next()
 }
 

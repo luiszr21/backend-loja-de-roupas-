@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.routes'
 import produtoRoutes from './routes/produto.routes'
 import categoriaRoutes from './routes/categoria.routes'
 import propostaRoutes from './routes/proposta.routes'
+import adminRoutes from './routes/admin.routes'
 
 
 
@@ -24,6 +25,7 @@ app.use('/auth', authRoutes)
 app.use('/produtos', produtoRoutes)
 app.use('/categorias', categoriaRoutes)
 app.use('/propostas', propostaRoutes)
+app.use('/admin', adminRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Loja de Roupas funcionando! 👗' })
