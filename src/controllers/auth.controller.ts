@@ -1,20 +1,23 @@
 import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { randomUUID } from 'crypto'
 import prisma from '../lib/prisma'
 import { cadastroSchema, loginSchema } from '../schemas/auth.schema'
 
 // ==================== HELPERS ====================
 
-const gerarToken = (id: number, tipo: 'cliente' | 'admin') => {
+const gerarToken = (id: string, role: 'user' | 'admin') => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET não definido')
   }
 
+  const jti = randomUUID()
+
   return jwt.sign(
-    { id, tipo },
+    { id, role },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '7d', jwtid: jti }
   )
 }
 
@@ -23,9 +26,9 @@ const autenticar = async (
   email: string,
   senha: string
 ) => {
-  const entidade = await prisma[model].findUnique({
-    where: { email }
-  })
+  const entidade = model === 'usuario'
+    ? await prisma.usuario.findUnique({ where: { email } })
+    : await prisma.admin.findUnique({ where: { email } })
 
   if (!entidade || !entidade.senha) return null
 
@@ -35,15 +38,30 @@ const autenticar = async (
   return entidade
 }
 
+const formatarErrosValidacao = (fieldErrors: Record<string, string[] | undefined>) => {
+  const campos: Record<string, string> = {}
+
+  for (const [campo, erros] of Object.entries(fieldErrors)) {
+    if (erros && erros.length > 0) {
+      campos[campo] = erros[0]
+    }
+  }
+
+  return {
+    erro: 'Dados inválidos',
+    campos
+  }
+}
+
 // ==================== CADASTRO ====================
 
 export const cadastroCliente = async (req: Request, res: Response) => {
   const validacao = cadastroSchema.safeParse(req.body)
 
   if (!validacao.success) {
-    return res.status(400).json({
-      erros: validacao.error.flatten().fieldErrors
-    })
+    return res.status(400).json(
+      formatarErrosValidacao(validacao.error.flatten().fieldErrors)
+    )
   }
 
   const { nome, email, senha } = validacao.data
@@ -55,7 +73,7 @@ export const cadastroCliente = async (req: Request, res: Response) => {
 
     if (usuarioExiste) {
       return res.status(400).json({
-        erro: 'Email já cadastrado'
+        erro: 'Não foi possível concluir o cadastro com os dados informados'
       })
     }
 
@@ -92,9 +110,9 @@ export const loginCliente = async (req: Request, res: Response) => {
   const validacao = loginSchema.safeParse(req.body)
 
   if (!validacao.success) {
-    return res.status(400).json({
-      erros: validacao.error.flatten().fieldErrors
-    })
+    return res.status(400).json(
+      formatarErrosValidacao(validacao.error.flatten().fieldErrors)
+    )
   }
 
   const { email, senha } = validacao.data
@@ -108,7 +126,7 @@ export const loginCliente = async (req: Request, res: Response) => {
       })
     }
 
-    const token = gerarToken(usuario.id, 'cliente')
+    const token = gerarToken(usuario.id, 'user')
 
     return res.json({
       token,
@@ -116,7 +134,7 @@ export const loginCliente = async (req: Request, res: Response) => {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
-        tipo: 'cliente'
+        role: 'user'
       }
     })
   } catch (error) {
@@ -134,9 +152,9 @@ export const loginAdmin = async (req: Request, res: Response) => {
   const validacao = loginSchema.safeParse(req.body)
 
   if (!validacao.success) {
-    return res.status(400).json({
-      erros: validacao.error.flatten().fieldErrors
-    })
+    return res.status(400).json(
+      formatarErrosValidacao(validacao.error.flatten().fieldErrors)
+    )
   }
 
   const { email, senha } = validacao.data
@@ -158,9 +176,78 @@ export const loginAdmin = async (req: Request, res: Response) => {
         id: admin.id,
         nome: admin.nome,
         email: admin.email,
-        tipo: 'admin'
+        role: 'admin'
       }
     })
+  } catch (error) {
+    console.error(error)
+
+    return res.status(500).json({
+      erro: 'Erro interno do servidor'
+    })
+  }
+}
+
+export const me = async (req: Request, res: Response) => {
+  const auth = res.locals.auth as { id: string, role: 'user' | 'admin', jti: string, exp: number } | undefined
+
+  if (!auth) {
+    return res.status(401).json({ erro: 'Token não fornecido' })
+  }
+
+  try {
+    if (auth.role === 'user') {
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: auth.id },
+        select: { id: true, nome: true, email: true }
+      })
+
+      if (!usuario) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' })
+      }
+
+      return res.json({ user: { ...usuario, role: 'user' as const } })
+    }
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: auth.id },
+      select: { id: true, nome: true, email: true }
+    })
+
+    if (!admin) {
+      return res.status(404).json({ erro: 'Usuário não encontrado' })
+    }
+
+    return res.json({ user: { ...admin, role: 'admin' as const } })
+  } catch (error) {
+    console.error(error)
+
+    return res.status(500).json({
+      erro: 'Erro interno do servidor'
+    })
+  }
+}
+
+export const logout = async (_req: Request, res: Response) => {
+  const auth = res.locals.auth as { id: string, role: 'user' | 'admin', jti: string, exp: number } | undefined
+
+  if (!auth) {
+    return res.status(401).json({ erro: 'Token não fornecido' })
+  }
+
+  try {
+    await prisma.tokenRevogado.upsert({
+      where: { jti: auth.jti },
+      update: {},
+      create: {
+        jti: auth.jti,
+        usuarioId: auth.id,
+        role: auth.role,
+        expiracao: new Date(auth.exp * 1000)
+      }
+    })
+
+    return res.status(204).send()
   } catch (error) {
     console.error(error)
 
