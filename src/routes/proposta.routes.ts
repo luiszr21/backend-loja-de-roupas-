@@ -4,9 +4,12 @@ import { autenticarCliente, autenticarAdmin } from '../middlewares/auth.middlewa
 
 const router = Router()
 
+// Rotas de cliente
 router.post('/', autenticarCliente, criarProposta)
 router.get('/minhas', autenticarCliente, minhasPropostas)
-router.get('/', autenticarAdmin, listarPropostas)
+
+// Rotas de admin
 router.patch('/:id', autenticarAdmin, responderProposta)
+router.get('/', autenticarAdmin, listarPropostas)
 
 export default router
