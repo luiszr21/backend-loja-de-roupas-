@@ -5,7 +5,7 @@ export const cadastroSchema = z.object({
     .trim()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo')
-    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras'),
+    .regex(/^[A-Za-zÀ-ÿ]+(?: [A-Za-zÀ-ÿ]+)*$/, 'Nome deve conter apenas letras e espaços simples entre palavras'),
 
   email: z.string()
     .trim()

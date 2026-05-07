@@ -81,3 +81,15 @@ model Proposta {
   @@index([usuarioId])
   @@index([produtoId])
 }
+
+model TokenRevogado {
+  id         String   @id @default(uuid())
+  jti        String   @unique
+  usuarioId  String
+  role       String
+  expiracao  DateTime
+  revogadoEm DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([expiracao])
+}

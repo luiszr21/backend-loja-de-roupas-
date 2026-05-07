@@ -1,6 +1,12 @@
 import { Router } from 'express'
-import { criarProposta, minhasPropostas, listarPropostas, responderProposta } from '../controllers/proposta.controller'
-import { autenticarCliente, autenticarAdmin } from '../middlewares/auth.middleware'
+import {
+	criarProposta,
+	minhasPropostas,
+	atualizarMinhaProposta,
+	patchMinhaProposta,
+	excluirMinhaProposta
+} from '../controllers/proposta.controller'
+import { autenticarCliente } from '../middlewares/auth.middleware'
 
 const router = Router()
 
