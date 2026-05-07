@@ -10,10 +10,12 @@ import { autenticarCliente } from '../middlewares/auth.middleware'
 
 const router = Router()
 
+// Rotas de cliente - ANTES das rotas de admin
 router.post('/', autenticarCliente, criarProposta)
 router.get('/minhas', autenticarCliente, minhasPropostas)
-router.put('/:id', autenticarCliente, atualizarMinhaProposta)
-router.patch('/:id', autenticarCliente, patchMinhaProposta)
-router.delete('/:id', autenticarCliente, excluirMinhaProposta)
+router.patch('/:id', autenticarAdmin, responderProposta)
+
+// Rotas de admin - DEPOIS
+router.get('/', autenticarAdmin, listarPropostas)
 
 export default router

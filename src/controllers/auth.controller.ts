@@ -7,7 +7,7 @@ import { cadastroSchema, loginSchema } from '../schemas/auth.schema'
 
 // ==================== HELPERS ====================
 
-const gerarToken = (id: string, role: 'user' | 'admin') => {
+const gerarToken = (id: string, tipo: 'cliente' | 'admin') => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET não definido')
   }
@@ -21,14 +21,39 @@ const gerarToken = (id: string, role: 'user' | 'admin') => {
   )
 }
 
+const validarSenha = (senha: string): { valida: boolean; requisitos: { nome: string; atendido: boolean }[] } => {
+  const requisitos = [
+    {
+      nome: 'Mínimo de 8 caracteres',
+      atendido: senha.length >= 8
+    },
+    {
+      nome: 'Pelo menos uma letra maiúscula',
+      atendido: /[A-Z]/.test(senha)
+    },
+    {
+      nome: 'Pelo menos um número',
+      atendido: /[0-9]/.test(senha)
+    },
+    {
+      nome: 'Pelo menos um caractere especial (!@#$%^&*)',
+      atendido: /[^a-zA-Z0-9]/.test(senha)
+    }
+  ]
+
+  const valida = requisitos.every(r => r.atendido)
+
+  return { valida, requisitos }
+}
+
 const autenticar = async (
   model: 'usuario' | 'admin',
   email: string,
   senha: string
 ) => {
-  const entidade = model === 'usuario'
-    ? await prisma.usuario.findUnique({ where: { email } })
-    : await prisma.admin.findUnique({ where: { email } })
+  const entidade = model === 'admin' 
+    ? await prisma.admin.findUnique({ where: { email } })
+    : await prisma.usuario.findUnique({ where: { email } })
 
   if (!entidade || !entidade.senha) return null
 
@@ -59,9 +84,20 @@ export const cadastroCliente = async (req: Request, res: Response) => {
   const validacao = cadastroSchema.safeParse(req.body)
 
   if (!validacao.success) {
-    return res.status(400).json(
-      formatarErrosValidacao(validacao.error.flatten().fieldErrors)
-    )
+    const erros = validacao.error.flatten().fieldErrors
+    
+    // Se houver erro na senha, adicionar requisitos detalhados
+    if (erros.senha && req.body.senha) {
+      const validacaoSenha = validarSenha(req.body.senha)
+      return res.status(400).json({
+        erros,
+        senhaRequisitos: validacaoSenha.requisitos
+      })
+    }
+
+    return res.status(400).json({
+      erros
+    })
   }
 
   const { nome, email, senha } = validacao.data
