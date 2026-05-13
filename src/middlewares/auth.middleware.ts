@@ -26,21 +26,36 @@ const extrairRole = (payload: TokenPayload): Role | null => {
 }
 
 const validarToken = async (req: Request, res: Response) => {
+  // Tentar obter token do header Authorization ou do cookie
   const authHeader = req.headers.authorization
+  let token: string | undefined
 
-  if (!authHeader) {
+  if (authHeader) {
+    const [scheme, bearerToken] = authHeader.split(' ')
+    if (scheme === 'Bearer' && bearerToken) {
+      token = bearerToken
+    }
+  }
+
+  // Fallback: tentar do cookie se não achou no header
+  if (!token && (req.cookies as any)?.token) {
+    token = (req.cookies as any).token
+  }
+
+  if (!token) {
     res.status(401).json({ erro: 'Token não fornecido' })
     return null
   }
 
-  const [scheme, token] = authHeader.split(' ')
-  if (scheme !== 'Bearer' || !token) {
-    res.status(401).json({ erro: 'Token inválido ou expirado' })
-    return null
-  }
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as TokenPayload
+    const secret = process.env.JWT_SECRET
+    if (!secret) {
+      console.error('[ERRO] JWT_SECRET não definido')
+      res.status(500).json({ erro: 'Configuração do servidor inválida' })
+      return null
+    }
+
+    const decoded = jwt.verify(token, secret) as TokenPayload
     const role = extrairRole(decoded)
 
     if (!decoded.id || !role || !decoded.jti || !decoded.exp) {
@@ -66,7 +81,9 @@ const validarToken = async (req: Request, res: Response) => {
 
 export const autenticarCliente = async (req: Request, res: Response, next: NextFunction) => {
   const auth = await validarToken(req, res)
-  if (!auth) return
+  if (!auth) {
+    return  // Já respondeu com erro
+  }
 
   if (auth.role !== 'user') {
     return res.status(403).json({ erro: 'Acesso negado' })
@@ -78,7 +95,9 @@ export const autenticarCliente = async (req: Request, res: Response, next: NextF
 
 export const autenticarUsuario = async (req: Request, res: Response, next: NextFunction) => {
   const auth = await validarToken(req, res)
-  if (!auth) return
+  if (!auth) {
+    return  // Já respondeu com erro
+  }
 
   res.locals.auth = auth
   next()
@@ -86,10 +105,18 @@ export const autenticarUsuario = async (req: Request, res: Response, next: NextF
 
 export const autenticarAdmin = async (req: Request, res: Response, next: NextFunction) => {
   const auth = await validarToken(req, res)
-  if (!auth) return
+  if (!auth) {
+    return  // Já respondeu com erro
+  }
 
-  if (auth.role !== 'admin') {
-    return res.status(403).json({ erro: 'Acesso negado' })
+  // Verificar se o usuário tem isAdmin = true no banco de dados
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: auth.id },
+    select: { isAdmin: true }
+  })
+
+  if (!usuario?.isAdmin) {
+    return res.status(403).json({ erro: 'Acesso negado - apenas administradores' })
   }
 
   res.locals.auth = auth

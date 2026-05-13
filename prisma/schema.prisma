@@ -20,6 +20,7 @@ model Usuario {
   nome      String
   email     String     @unique
   senha     String
+  isAdmin   Boolean    @default(false)
   criadoEm  DateTime   @default(now())
 
   enderecos Endereco[]
@@ -36,14 +37,14 @@ model Endereco {
   cep       String
   criadoEm  DateTime @default(now())
 
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
 }
 
 model Categoria {
   id       String    @id @default(uuid())
-  nome     String
+  nome     String    @unique
   produtos Produto[]
 }
 
@@ -58,28 +59,37 @@ model Produto {
   imagemUrl   String?
   destaque    Boolean   @default(false)
   criadoEm    DateTime  @default(now())
+  excluidoEm  DateTime?
 
-  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
   propostas   Proposta[]
 
   @@index([categoriaId])
 }
 
 model Proposta {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   usuarioId     String
   produtoId     String
   mensagem      String
   resposta      String?
-  status        String    @default("pendente")
-  criadoEm      DateTime  @default(now())
-  atualizadoEm  DateTime  @updatedAt
+  status        PropostaStatus @default(PENDENTE)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
 
-  usuario       Usuario   @relation(fields: [usuarioId], references: [id])
-  produto       Produto   @relation(fields: [produtoId], references: [id])
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  produto       Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([produtoId])
+}
+
+enum PropostaStatus {
+  PENDENTE
+  RESPONDIDA
+  ACEITA
+  REJEITADA
+  CANCELADA
 }
 
 model TokenRevogado {

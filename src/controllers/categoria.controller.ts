@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma'
+import { categoriaSchema } from '../schemas/categoria.schema'
 
 export const listarCategorias = async (req: Request, res: Response) => {
   try {
@@ -13,12 +14,14 @@ export const listarCategorias = async (req: Request, res: Response) => {
 }
 
 export const cadastrarCategoria = async (req: Request, res: Response) => {
-  const { nome } = req.body
+  const validacao = categoriaSchema.safeParse(req.body)
 
-  if (!nome) return res.status(400).json({ erro: 'Nome é obrigatório' })
+  if (!validacao.success) {
+    return res.status(400).json({ erros: validacao.error.flatten().fieldErrors })
+  }
 
   try {
-    const categoria = await prisma.categoria.create({ data: { nome } })
+    const categoria = await prisma.categoria.create({ data: validacao.data })
     return res.status(201).json(categoria)
   } catch (error) {
     console.error('Erro ao cadastrar categoria:', error)
