@@ -4,18 +4,23 @@ import {
 	minhasPropostas,
 	atualizarMinhaProposta,
 	patchMinhaProposta,
-	excluirMinhaProposta
+	excluirMinhaProposta,
+	atualizarStatusPropostaAdmin,
+	listarPropostas
 } from '../controllers/proposta.controller'
-import { autenticarCliente } from '../middlewares/auth.middleware'
+import { autenticarCliente, autenticarAdmin } from '../middlewares/auth.middleware'
 
 const router = Router()
 
-// Rotas de cliente - ANTES das rotas de admin
+// Rotas de admin - ANTES (rotas genéricas sempre primeiro)
+router.get('/', autenticarAdmin, listarPropostas)
+router.patch('/:id/status', autenticarAdmin, atualizarStatusPropostaAdmin)
+
+// Rotas de cliente - DEPOIS (rotas específicas depois)
 router.post('/', autenticarCliente, criarProposta)
 router.get('/minhas', autenticarCliente, minhasPropostas)
-router.patch('/:id', autenticarAdmin, responderProposta)
-
-// Rotas de admin - DEPOIS
-router.get('/', autenticarAdmin, listarPropostas)
+router.put('/:id', autenticarCliente, atualizarMinhaProposta)
+router.patch('/:id', autenticarCliente, patchMinhaProposta)
+router.delete('/:id', autenticarCliente, excluirMinhaProposta)
 
 export default router

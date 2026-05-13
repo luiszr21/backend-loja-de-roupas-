@@ -1,14 +1,16 @@
 import { Request, Response } from 'express'
 import prisma from '../lib/prisma'
+import { PropostaStatus } from '@prisma/client'
 import {
   criarPropostaSchema,
   atualizarPropostaSchema,
   patchPropostaSchema,
-  atualizarStatusAdminSchema
+  atualizarStatusAdminSchema,
+  listarPropostasQuerySchema
 } from '../schemas/proposta.schema'
 
-const STATUS_EDITAVEIS_PELO_CLIENTE = ['pendente']
-const STATUS_EXCLUIVEIS_PELO_CLIENTE = ['pendente', 'cancelada']
+const STATUS_EDITAVEIS_PELO_CLIENTE = ['PENDENTE']
+const STATUS_EXCLUIVEIS_PELO_CLIENTE = ['PENDENTE', 'CANCELADA']
 
 const formatarErrosValidacao = (fieldErrors: Record<string, string[] | undefined>) => {
   const campos: Record<string, string> = {}
@@ -57,6 +59,10 @@ export const criarProposta = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Produto não encontrado' })
     }
 
+    if (produto.estoque <= 0) {
+      return res.status(400).json({ erro: 'Produto fora de estoque' })
+    }
+
     const propostaExistente = await prisma.proposta.findFirst({
       where: { usuarioId, produtoId }
     })
@@ -65,7 +71,12 @@ export const criarProposta = async (req: Request, res: Response) => {
     }
 
     const proposta = await prisma.proposta.create({
-      data: { usuarioId, produtoId, mensagem, status: 'pendente' },
+      data: {
+        usuarioId,
+        produtoId,
+        mensagem,
+        status: PropostaStatus.PENDENTE
+      },
       include: { produto: true }
     })
 
@@ -79,8 +90,13 @@ export const criarProposta = async (req: Request, res: Response) => {
 // Cliente vê suas propostas
 export const minhasPropostas = async (req: Request, res: Response) => {
   const usuarioId = obterUsuarioAutenticado(res)
-  const page = parseInt(req.query.page as string) || 1
-  const limit = parseInt(req.query.limit as string) || 10
+  
+  const validacao = listarPropostasQuerySchema.safeParse(req.query)
+  if (!validacao.success) {
+    return res.status(400).json({ erros: validacao.error.flatten().fieldErrors })
+  }
+
+  const { page, limit } = validacao.data
 
   if (!usuarioId) {
     return res.status(401).json({ erro: 'Usuário não autenticado' })
@@ -120,9 +136,13 @@ export const minhasPropostas = async (req: Request, res: Response) => {
 
 // Admin vê todas as propostas
 export const listarPropostas = async (req: Request, res: Response) => {
-  const status = req.query.status as string | undefined
-  const page = parseInt(req.query.page as string) || 1
-  const limit = parseInt(req.query.limit as string) || 10
+  const validacao = listarPropostasQuerySchema.safeParse(req.query)
+  
+  if (!validacao.success) {
+    return res.status(400).json({ erros: validacao.error.flatten().fieldErrors })
+  }
+
+  const { status, page, limit } = validacao.data
 
   try {
     const skip = (page - 1) * limit
@@ -159,7 +179,7 @@ export const listarPropostas = async (req: Request, res: Response) => {
 // Cliente atualiza proposta própria (PUT)
 export const atualizarMinhaProposta = async (req: Request, res: Response) => {
   const usuarioId = obterUsuarioAutenticado(res)
-  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
+  const id = req.params.id as string
 
   if (!usuarioId) {
     return res.status(401).json({ erro: 'Usuário não autenticado' })
@@ -205,7 +225,7 @@ export const atualizarMinhaProposta = async (req: Request, res: Response) => {
 // Cliente atualiza parcialmente proposta própria (PATCH)
 export const patchMinhaProposta = async (req: Request, res: Response) => {
   const usuarioId = obterUsuarioAutenticado(res)
-  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
+  const id = req.params.id as string
 
   if (!usuarioId) {
     return res.status(401).json({ erro: 'Usuário não autenticado' })
@@ -233,7 +253,7 @@ export const patchMinhaProposta = async (req: Request, res: Response) => {
       })
     }
 
-    if (validacao.data.status && validacao.data.status !== 'cancelada') {
+    if (validacao.data.status && validacao.data.status !== 'CANCELADA') {
       return res.status(400).json({ erro: 'Status inválido para cliente' })
     }
 

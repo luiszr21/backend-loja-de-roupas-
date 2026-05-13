@@ -14,6 +14,8 @@ const gerarToken = (id: string, tipo: 'cliente' | 'admin') => {
 
   const jti = randomUUID()
 
+  const role = tipo === 'cliente' ? 'user' : 'admin'
+
   return jwt.sign(
     { id, role },
     process.env.JWT_SECRET,
@@ -51,16 +53,21 @@ const autenticar = async (
   email: string,
   senha: string
 ) => {
-  const entidade = model === 'admin' 
-    ? await prisma.admin.findUnique({ where: { email } })
-    : await prisma.usuario.findUnique({ where: { email } })
+  try {
+    const entidade = model === 'admin' 
+      ? await prisma.admin.findUnique({ where: { email } })
+      : await prisma.usuario.findUnique({ where: { email } })
 
-  if (!entidade || !entidade.senha) return null
+    if (!entidade || !entidade.senha) return null
 
-  const senhaCorreta = await bcrypt.compare(senha, entidade.senha)
-  if (!senhaCorreta) return null
+    const senhaCorreta = await bcrypt.compare(senha, entidade.senha)
+    if (!senhaCorreta) return null
 
-  return entidade
+    return entidade
+  } catch (error) {
+    console.error('[ERRO] Falha na autenticação:', error)
+    return null
+  }
 }
 
 const formatarErrosValidacao = (fieldErrors: Record<string, string[] | undefined>) => {
@@ -86,15 +93,6 @@ export const cadastroCliente = async (req: Request, res: Response) => {
   if (!validacao.success) {
     const erros = validacao.error.flatten().fieldErrors
     
-    // Se houver erro na senha, adicionar requisitos detalhados
-    if (erros.senha && req.body.senha) {
-      const validacaoSenha = validarSenha(req.body.senha)
-      return res.status(400).json({
-        erros,
-        senhaRequisitos: validacaoSenha.requisitos
-      })
-    }
-
     return res.status(400).json({
       erros
     })
@@ -132,7 +130,7 @@ export const cadastroCliente = async (req: Request, res: Response) => {
       }
     })
   } catch (error) {
-    console.error(error)
+    console.error('[ERRO] Falha ao cadastrar usuário:', error)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -162,19 +160,26 @@ export const loginCliente = async (req: Request, res: Response) => {
       })
     }
 
-    const token = gerarToken(usuario.id, 'user')
+    const token = gerarToken(usuario.id, 'cliente')
 
-    return res.json({
-      token,
-      user: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-        role: 'user'
-      }
-    })
+    return res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      })
+      .json({
+        token,
+        user: {
+          id: usuario.id,
+          nome: usuario.nome,
+          email: usuario.email,
+          role: 'user'
+        }
+      })
   } catch (error) {
-    console.error(error)
+    console.error('[ERRO] Falha no login de cliente:', error)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -206,17 +211,24 @@ export const loginAdmin = async (req: Request, res: Response) => {
 
     const token = gerarToken(admin.id, 'admin')
 
-    return res.json({
-      token,
-      user: {
-        id: admin.id,
-        nome: admin.nome,
-        email: admin.email,
-        role: 'admin'
-      }
-    })
+    return res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      })
+      .json({
+        token,
+        user: {
+          id: admin.id,
+          nome: admin.nome,
+          email: admin.email,
+          role: 'admin'
+        }
+      })
   } catch (error) {
-    console.error(error)
+    console.error('[ERRO] Falha no login de admin:', error)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -284,6 +296,67 @@ export const logout = async (_req: Request, res: Response) => {
     })
 
     return res.status(204).send()
+  } catch (error) {
+    console.error(error)
+
+    return res.status(500).json({
+      erro: 'Erro interno do servidor'
+    })
+  }
+}
+
+// ==================== CRIAR ADMIN ====================
+
+export const criarAdmin = async (req: Request, res: Response) => {
+  const validacao = cadastroSchema.safeParse(req.body)
+
+  if (!validacao.success) {
+    const erros = validacao.error.flatten().fieldErrors
+    
+    // Se houver erro na senha, adicionar requisitos detalhados
+    if (erros.senha && req.body.senha) {
+      const validacaoSenha = validarSenha(req.body.senha)
+      return res.status(400).json({
+        erros,
+        senhaRequisitos: validacaoSenha.requisitos
+      })
+    }
+
+    return res.status(400).json({ erros })
+  }
+
+  const { nome, email, senha } = validacao.data
+
+  try {
+    const adminExiste = await prisma.admin.findUnique({
+      where: { email }
+    })
+
+    if (adminExiste) {
+      return res.status(409).json({
+        erro: 'Email já cadastrado como administrador'
+      })
+    }
+
+    const senhaCriptografada = await bcrypt.hash(senha, 10)
+
+    const admin = await prisma.admin.create({
+      data: {
+        nome,
+        email,
+        senha: senhaCriptografada
+      }
+    })
+
+    return res.status(201).json({
+      mensagem: 'Admin criado com sucesso',
+      user: {
+        id: admin.id,
+        nome: admin.nome,
+        email: admin.email,
+        role: 'admin'
+      }
+    })
   } catch (error) {
     console.error(error)
 

@@ -12,13 +12,23 @@ export const listarProdutos = async (req: Request, res: Response) => {
       where: {
         ...(busca && { nome: { contains: busca as string, mode: 'insensitive' } }),
         ...(categoriaId && { categoriaId: categoriaId as string }),
-        estoque: { gt: 0 }
+        estoque: { gt: 0 },
+        excluidoEm: null
       },
       include: { categoria: true },
       orderBy: { criadoEm: 'desc' }
     })
 
-    return res.json(produtos)
+    return res.json(produtos.map((produto) => ({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      tamanho: produto.tamanho,
+      descricao: produto.descricao,
+      imagemUrl: produto.imagemUrl,
+      avaliacao: 0,
+      criadoEm: produto.criadoEm
+    })))
   } catch (error) {
     console.error('Erro ao listar produtos:', error)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
@@ -29,11 +39,20 @@ export const listarProdutos = async (req: Request, res: Response) => {
 export const listarDestaques = async (req: Request, res: Response) => {
   try {
     const produtos = await prisma.produto.findMany({
-      where: { destaque: true, estoque: { gt: 0 } },
+      where: { destaque: true, estoque: { gt: 0 }, excluidoEm: null },
       include: { categoria: true }
     })
 
-    return res.json(produtos)
+    return res.json(produtos.map((produto) => ({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      tamanho: produto.tamanho,
+      descricao: produto.descricao,
+      imagemUrl: produto.imagemUrl,
+      avaliacao: 0,
+      criadoEm: produto.criadoEm
+    })))
   } catch (error) {
     console.error('Erro ao listar destaques:', error)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
@@ -50,9 +69,22 @@ export const detalharProduto = async (req: Request, res: Response) => {
       include: { categoria: true }
     })
 
-    if (!produto) return res.status(404).json({ erro: 'Produto não encontrado' })
+    if (!produto || produto.excluidoEm) return res.status(404).json({ erro: 'Produto não encontrado' })
 
-    return res.json(produto)
+    if (produto.estoque <= 0) {
+      return res.status(404).json({ erro: 'Produto fora de estoque' })
+    }
+
+    return res.json({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      tamanho: produto.tamanho,
+      descricao: produto.descricao,
+      imagemUrl: produto.imagemUrl,
+      avaliacao: 0,
+      criadoEm: produto.criadoEm
+    })
   } catch (error) {
     console.error('Erro ao detalhar produto:', error)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
@@ -139,7 +171,7 @@ export const editarProduto = async (req: Request, res: Response) => {
 export const removerProduto = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string
-    await prisma.produto.delete({ where: { id } })
+    await prisma.produto.update({ where: { id }, data: { excluidoEm: new Date() } })
     return res.json({ mensagem: 'Produto removido com sucesso' })
   } catch (error) {
     console.error('Erro ao remover produto:', error)
