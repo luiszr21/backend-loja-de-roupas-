@@ -84,9 +84,7 @@ export const autenticarCliente = async (req: Request, res: Response, next: NextF
   if (!auth) {
     return  // Já respondeu com erro
   }
-
-  console.log('[AUTH] autenticarCliente - role:', auth.role, 'id:', auth.id)
-
+  // debug log removed to avoid noisy output in runtime
   if (auth.role !== 'user') {
     return res.status(403).json({ erro: 'Acesso negado', receivedRole: auth.role })
   }
