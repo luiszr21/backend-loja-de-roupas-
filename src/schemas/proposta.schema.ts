@@ -1,10 +1,18 @@
 import { z } from 'zod'
 
 export const STATUS_PROPOSTA = ['PENDENTE', 'RESPONDIDA', 'ACEITA', 'REJEITADA', 'CANCELADA'] as const
+export const STATUS_FILTRO_PROPOSTA = ['PENDENTE', 'RESPONDIDA', 'CANCELADA'] as const
 
 export const criarPropostaSchema = z.object({
-  produtoId: z.coerce.string().min(1, 'Produto inválido'),
+  produtoId: z.coerce.string().min(1, 'Produto inválido').optional(),
+  productId: z.coerce.string().min(1, 'Produto inválido').optional(),
   mensagem: z.string().trim().min(5, 'Mensagem deve ter pelo menos 5 caracteres').max(1000, 'Mensagem muito longa')
+}).transform((data) => ({
+  produtoId: data.produtoId ?? data.productId ?? '',
+  mensagem: data.mensagem
+})).refine((data) => Boolean(data.produtoId), {
+  message: 'Produto inválido',
+  path: ['produtoId']
 })
 
 export const atualizarPropostaSchema = z.object({
@@ -33,7 +41,7 @@ export const atualizarStatusAdminSchema = z.object({
 })
 
 export const listarPropostasQuerySchema = z.object({
-  status: z.enum(STATUS_PROPOSTA).optional(),
+  status: z.enum(STATUS_FILTRO_PROPOSTA).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10)
 })

@@ -226,11 +226,26 @@ export const criarProdutoAdmin = async (req: Request, res: Response) => {
     const nome = String(req.body?.nome ?? '').trim()
     const preco = Number(req.body?.preco)
     const tamanho = String(req.body?.tamanho ?? 'M').trim() || 'M'
+    const estoqueInformado = Number(req.body?.estoque)
+    const categoriaId = req.body?.categoriaId ? String(req.body.categoriaId).trim() : null
     const descricao = req.body?.descricao ? String(req.body.descricao).trim() : null
     const imagemUrl = req.body?.imagemUrl ? String(req.body.imagemUrl).trim() : null
+    const destaque = typeof req.body?.destaque === 'boolean' ? req.body.destaque : false
 
-    if (!nome || Number.isNaN(preco)) {
+    const estoque = Number.isFinite(estoqueInformado) ? Math.floor(estoqueInformado) : 1
+
+    if (!nome || Number.isNaN(preco) || preco <= 0 || estoque < 0) {
       return res.status(400).json({ erro: 'Dados inválidos' })
+    }
+
+    if (categoriaId) {
+      const categoria = await prisma.categoria.findUnique({
+        where: { id: categoriaId }
+      })
+
+      if (!categoria) {
+        return res.status(404).json({ erro: 'Categoria não encontrada' })
+      }
     }
 
     const produto = await prisma.produto.create({
@@ -240,8 +255,9 @@ export const criarProdutoAdmin = async (req: Request, res: Response) => {
         tamanho,
         descricao,
         imagemUrl,
-        estoque: 0,
-        categoriaId: null
+        estoque,
+        categoriaId,
+        destaque
       }
     })
 
@@ -261,6 +277,24 @@ export const atualizarProdutoAdmin = async (req: Request, res: Response) => {
     if (req.body?.tamanho !== undefined) data.tamanho = String(req.body.tamanho).trim()
     if (req.body?.descricao !== undefined) data.descricao = req.body.descricao ? String(req.body.descricao).trim() : null
     if (req.body?.imagemUrl !== undefined) data.imagemUrl = req.body.imagemUrl ? String(req.body.imagemUrl).trim() : null
+    if (req.body?.estoque !== undefined) data.estoque = Number(req.body.estoque)
+    if (req.body?.destaque !== undefined) data.destaque = Boolean(req.body.destaque)
+
+    if (req.body?.categoriaId !== undefined) {
+      const categoriaId = req.body.categoriaId ? String(req.body.categoriaId).trim() : null
+
+      if (categoriaId) {
+        const categoria = await prisma.categoria.findUnique({
+          where: { id: categoriaId }
+        })
+
+        if (!categoria) {
+          return res.status(404).json({ erro: 'Categoria não encontrada' })
+        }
+      }
+
+      data.categoriaId = categoriaId
+    }
 
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
 
@@ -284,9 +318,8 @@ export const excluirProdutoAdmin = async (req: Request, res: Response) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
 
-    await prisma.produto.update({
+    await prisma.produto.delete({
       where: { id },
-      data: { excluidoEm: new Date() }
     })
 
     return res.json({ mensagem: 'Produto removido com sucesso' })

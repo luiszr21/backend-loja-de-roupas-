@@ -100,12 +100,14 @@ export const cadastrarProduto = async (req: Request, res: Response) => {
   }
 
   try {
-    const categoria = await prisma.categoria.findUnique({
-      where: { id: validacao.data.categoriaId }
-    })
+    if (validacao.data.categoriaId) {
+      const categoria = await prisma.categoria.findUnique({
+        where: { id: validacao.data.categoriaId }
+      })
 
-    if (!categoria) {
-      return res.status(404).json({ erro: 'Categoria não encontrada' })
+      if (!categoria) {
+        return res.status(404).json({ erro: 'Categoria não encontrada' })
+      }
     }
 
     const produto = await prisma.produto.create({ data: validacao.data })
@@ -171,7 +173,7 @@ export const editarProduto = async (req: Request, res: Response) => {
 export const removerProduto = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string
-    await prisma.produto.update({ where: { id }, data: { excluidoEm: new Date() } })
+    await prisma.produto.delete({ where: { id } })
     return res.json({ mensagem: 'Produto removido com sucesso' })
   } catch (error) {
     console.error('Erro ao remover produto:', error)

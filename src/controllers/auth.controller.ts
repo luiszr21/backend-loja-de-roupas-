@@ -5,6 +5,12 @@ import { randomUUID } from 'crypto'
 import prisma from '../lib/prisma'
 import { cadastroSchema, loginSchema } from '../schemas/auth.schema'
 
+type AuthUser = {
+  id: string
+  nome: string
+  email: string
+}
+
 // ==================== HELPERS ====================
 
 const gerarToken = (id: string, tipo: 'cliente' | 'admin') => {
@@ -13,13 +19,12 @@ const gerarToken = (id: string, tipo: 'cliente' | 'admin') => {
   }
 
   const jti = randomUUID()
-
   const role = tipo === 'cliente' ? 'user' : 'admin'
 
   return jwt.sign(
-    { id, role },
+    { id, role, jti },
     process.env.JWT_SECRET,
-    { expiresIn: '7d', jwtid: jti }
+    { expiresIn: '7d' }
   )
 }
 
@@ -67,6 +72,46 @@ const autenticar = async (
   } catch (error) {
     console.error('[ERRO] Falha na autenticação:', error)
     return null
+  }
+}
+
+const encontrarAdminAutenticado = async (email: string, senha: string): Promise<(AuthUser & { origem: 'usuario' | 'admin' }) | null> => {
+  const usuario = await prisma.usuario.findUnique({
+    where: { email },
+    select: { id: true, nome: true, email: true, senha: true, isAdmin: true }
+  })
+
+  if (usuario?.isAdmin) {
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha)
+    if (senhaCorreta) {
+      return {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        origem: 'usuario'
+      }
+    }
+  }
+
+  const admin = await prisma.admin.findUnique({
+    where: { email },
+    select: { id: true, nome: true, email: true, senha: true }
+  })
+
+  if (!admin) {
+    return null
+  }
+
+  const senhaCorreta = await bcrypt.compare(senha, admin.senha)
+  if (!senhaCorreta) {
+    return null
+  }
+
+  return {
+    id: admin.id,
+    nome: admin.nome,
+    email: admin.email,
+    origem: 'admin'
   }
 }
 
@@ -175,7 +220,8 @@ export const loginCliente = async (req: Request, res: Response) => {
           id: usuario.id,
           nome: usuario.nome,
           email: usuario.email,
-          role: 'user'
+          role: 'user',
+          tipo: 'user'
         }
       })
   } catch (error) {
@@ -201,12 +247,25 @@ export const loginAdmin = async (req: Request, res: Response) => {
   const { email, senha } = validacao.data
 
   try {
-    const admin = await autenticar('admin', email, senha)
+    const admin = await encontrarAdminAutenticado(email, senha)
 
     if (!admin) {
       return res.status(401).json({
         erro: 'Email ou senha inválidos'
       })
+    }
+
+    if (admin.origem === 'usuario') {
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: admin.id },
+        select: { isAdmin: true }
+      })
+
+      if (!usuario?.isAdmin) {
+        return res.status(403).json({
+          erro: 'Apenas administradores podem acessar este painel'
+        })
+      }
     }
 
     const token = gerarToken(admin.id, 'admin')
@@ -224,7 +283,8 @@ export const loginAdmin = async (req: Request, res: Response) => {
           id: admin.id,
           nome: admin.nome,
           email: admin.email,
-          role: 'admin'
+          role: 'admin',
+          tipo: 'admin'
         }
       })
   } catch (error) {
@@ -254,7 +314,16 @@ export const me = async (req: Request, res: Response) => {
         return res.status(404).json({ erro: 'Usuário não encontrado' })
       }
 
-      return res.json({ user: { ...usuario, role: 'user' as const } })
+      return res.json({ user: { ...usuario, role: 'user' as const, tipo: 'user' as const } })
+    }
+
+    const usuarioAdmin = await prisma.usuario.findUnique({
+      where: { id: auth.id },
+      select: { id: true, nome: true, email: true, isAdmin: true }
+    })
+
+    if (usuarioAdmin?.isAdmin) {
+      return res.json({ user: { id: usuarioAdmin.id, nome: usuarioAdmin.nome, email: usuarioAdmin.email, role: 'admin' as const, tipo: 'admin' as const } })
     }
 
     const admin = await prisma.admin.findUnique({
@@ -266,7 +335,7 @@ export const me = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Usuário não encontrado' })
     }
 
-    return res.json({ user: { ...admin, role: 'admin' as const } })
+    return res.json({ user: { ...admin, role: 'admin' as const, tipo: 'admin' as const } })
   } catch (error) {
     console.error(error)
 
@@ -354,7 +423,8 @@ export const criarAdmin = async (req: Request, res: Response) => {
         id: admin.id,
         nome: admin.nome,
         email: admin.email,
-        role: 'admin'
+        role: 'admin',
+        tipo: 'admin'
       }
     })
   } catch (error) {
