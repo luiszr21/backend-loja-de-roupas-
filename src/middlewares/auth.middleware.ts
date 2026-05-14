@@ -85,8 +85,10 @@ export const autenticarCliente = async (req: Request, res: Response, next: NextF
     return  // Já respondeu com erro
   }
 
+  console.log('[AUTH] autenticarCliente - role:', auth.role, 'id:', auth.id)
+
   if (auth.role !== 'user') {
-    return res.status(403).json({ erro: 'Acesso negado' })
+    return res.status(403).json({ erro: 'Acesso negado', receivedRole: auth.role })
   }
 
   res.locals.auth = auth
@@ -109,13 +111,23 @@ export const autenticarAdmin = async (req: Request, res: Response, next: NextFun
     return  // Já respondeu com erro
   }
 
-  // Verificar se o usuário tem isAdmin = true no banco de dados
   const usuario = await prisma.usuario.findUnique({
     where: { id: auth.id },
     select: { isAdmin: true }
   })
 
-  if (!usuario?.isAdmin) {
+  if (usuario?.isAdmin) {
+    res.locals.auth = auth
+    next()
+    return
+  }
+
+  const admin = await prisma.admin.findUnique({
+    where: { id: auth.id },
+    select: { id: true }
+  })
+
+  if (!admin) {
     return res.status(403).json({ erro: 'Acesso negado - apenas administradores' })
   }
 
