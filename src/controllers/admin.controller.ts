@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { Prisma, PropostaStatus } from '@prisma/client'
 import prisma from '../lib/prisma'
+import { info, error } from '../lib/logger'
 
 type InteracaoStatusPublica = 'pendente' | 'respondida' | 'confirmada' | 'excluida'
 
@@ -70,7 +71,7 @@ export const dashboardStats = async (_req: Request, res: Response) => {
       taxaRespostaPorcentagem
     })
   } catch (erro) {
-    console.error('Erro ao carregar dashboard:', erro)
+    error('Erro ao carregar dashboard:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -106,7 +107,7 @@ export const listarInteracoes = async (req: Request, res: Response) => {
       porPagina
     })
   } catch (erro) {
-    console.error('Erro ao listar interações:', erro)
+    error('Erro ao listar interações:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -138,7 +139,7 @@ export const responderInteracao = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Interação não encontrada' })
     }
 
-    console.error('Erro ao responder interação:', erro)
+    error('Erro ao responder interação:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -162,7 +163,7 @@ export const confirmarInteracao = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Interação não encontrada' })
     }
 
-    console.error('Erro ao confirmar interação:', erro)
+    error('Erro ao confirmar interação:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -188,11 +189,11 @@ export const enviarEmailInteracao = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Interação não encontrada' })
     }
 
-    console.log('[EMAIL] Enviar para:', email, 'Interação:', proposta.id)
+    info('[EMAIL] Enviar para:', email, 'Interação:', proposta.id)
 
     return res.json({ message: 'Email enviado com sucesso' })
   } catch (erro) {
-    console.error('Erro ao enviar email:', erro)
+    error('Erro ao enviar email:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -216,7 +217,7 @@ export const excluirInteracao = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Interação não encontrada' })
     }
 
-    console.error('Erro ao excluir interação:', erro)
+    error('Erro ao excluir interação:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -263,7 +264,7 @@ export const criarProdutoAdmin = async (req: Request, res: Response) => {
 
     return res.status(201).json(produto)
   } catch (erro) {
-    console.error('Erro ao criar produto admin:', erro)
+    error('Erro ao criar produto admin:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -309,7 +310,7 @@ export const atualizarProdutoAdmin = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Produto não encontrado' })
     }
 
-    console.error('Erro ao atualizar produto admin:', erro)
+    error('Erro ao atualizar produto admin:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -328,7 +329,7 @@ export const excluirProdutoAdmin = async (req: Request, res: Response) => {
       return res.status(404).json({ erro: 'Produto não encontrado' })
     }
 
-    console.error('Erro ao excluir produto admin:', erro)
+    error('Erro ao excluir produto admin:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }

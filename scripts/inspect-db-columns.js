@@ -1,4 +1,10 @@
 const { PrismaClient } = require('@prisma/client')
+const logger = require('./logger')
+
+if (process.env.NODE_ENV === 'production') {
+  console.error('Não execute scripts em produção')
+  process.exit(1)
+}
 
 const prisma = new PrismaClient()
 
@@ -11,12 +17,12 @@ async function main() {
     order by table_name, ordinal_position
   `)
 
-  console.log(JSON.stringify(rows, null, 2))
+  logger.info(JSON.stringify(rows, null, 2))
 }
 
 main()
   .catch((error) => {
-    console.error(error)
+    logger.error(error)
     process.exit(1)
   })
   .finally(async () => {

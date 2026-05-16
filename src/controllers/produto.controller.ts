@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma'
 import { produtoSchema } from '../schemas/produto.schema'
+import { error } from '../lib/logger'
 
 // Lista todos os produtos
 export const listarProdutos = async (req: Request, res: Response) => {
@@ -29,8 +30,8 @@ export const listarProdutos = async (req: Request, res: Response) => {
       avaliacao: 0,
       criadoEm: produto.criadoEm
     })))
-  } catch (error) {
-    console.error('Erro ao listar produtos:', error)
+  } catch (err) {
+    error('Erro ao listar produtos:', err)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -53,8 +54,8 @@ export const listarDestaques = async (req: Request, res: Response) => {
       avaliacao: 0,
       criadoEm: produto.criadoEm
     })))
-  } catch (error) {
-    console.error('Erro ao listar destaques:', error)
+  } catch (err) {
+    error('Erro ao listar destaques:', err)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -85,8 +86,8 @@ export const detalharProduto = async (req: Request, res: Response) => {
       avaliacao: 0,
       criadoEm: produto.criadoEm
     })
-  } catch (error) {
-    console.error('Erro ao detalhar produto:', error)
+  } catch (err) {
+    error('Erro ao detalhar produto:', err)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -112,8 +113,8 @@ export const cadastrarProduto = async (req: Request, res: Response) => {
 
     const produto = await prisma.produto.create({ data: validacao.data })
     return res.status(201).json(produto)
-  } catch (error) {
-    console.error('Erro ao cadastrar produto:', error)
+  } catch (err) {
+    error('Erro ao cadastrar produto:', err)
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2003') {
@@ -152,8 +153,8 @@ export const editarProduto = async (req: Request, res: Response) => {
     })
 
     return res.json(produto)
-  } catch (error) {
-    console.error('Erro ao editar produto:', error)
+  } catch (err) {
+    error('Erro ao editar produto:', err)
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') {
@@ -175,8 +176,8 @@ export const removerProduto = async (req: Request, res: Response) => {
     const id = req.params.id as string
     await prisma.produto.delete({ where: { id } })
     return res.json({ mensagem: 'Produto removido com sucesso' })
-  } catch (error) {
-    console.error('Erro ao remover produto:', error)
+  } catch (err) {
+    error('Erro ao remover produto:', err)
 
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return res.status(404).json({ erro: 'Produto não encontrado' })

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import prisma from '../lib/prisma'
+import { error } from '../lib/logger'
 import 'dotenv/config'  
 
 type Role = 'user' | 'admin'
@@ -50,7 +51,7 @@ const validarToken = async (req: Request, res: Response) => {
   try {
     const secret = process.env.JWT_SECRET
     if (!secret) {
-      console.error('[ERRO] JWT_SECRET não definido')
+      error('[ERRO] JWT_SECRET não definido')
       res.status(500).json({ erro: 'Configuração do servidor inválida' })
       return null
     }

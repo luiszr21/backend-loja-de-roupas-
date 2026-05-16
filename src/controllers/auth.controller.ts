@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
 import prisma from '../lib/prisma'
 import { cadastroSchema, loginSchema } from '../schemas/auth.schema'
+import { error } from '../lib/logger'
 
 type AuthUser = {
   id: string
@@ -69,8 +70,8 @@ const autenticar = async (
     if (!senhaCorreta) return null
 
     return entidade
-  } catch (error) {
-    console.error('[ERRO] Falha na autenticação:', error)
+  } catch (err) {
+    error('[ERRO] Falha na autenticação:', err)
     return null
   }
 }
@@ -174,8 +175,8 @@ export const cadastroCliente = async (req: Request, res: Response) => {
         email: usuario.email
       }
     })
-  } catch (error) {
-    console.error('[ERRO] Falha ao cadastrar usuário:', error)
+  } catch (err) {
+    error('[ERRO] Falha ao cadastrar usuário:', err)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -224,8 +225,8 @@ export const loginCliente = async (req: Request, res: Response) => {
           tipo: 'user'
         }
       })
-  } catch (error) {
-    console.error('[ERRO] Falha no login de cliente:', error)
+  } catch (err) {
+    error('[ERRO] Falha no login de cliente:', err)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -287,8 +288,8 @@ export const loginAdmin = async (req: Request, res: Response) => {
           tipo: 'admin'
         }
       })
-  } catch (error) {
-    console.error('[ERRO] Falha no login de admin:', error)
+  } catch (err) {
+    error('[ERRO] Falha no login de admin:', err)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -336,8 +337,8 @@ export const me = async (req: Request, res: Response) => {
     }
 
     return res.json({ user: { ...admin, role: 'admin' as const, tipo: 'admin' as const } })
-  } catch (error) {
-    console.error(error)
+  } catch (err) {
+    error(err)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -365,8 +366,8 @@ export const logout = async (_req: Request, res: Response) => {
     })
 
     return res.status(204).send()
-  } catch (error) {
-    console.error(error)
+  } catch (err) {
+    error(err)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'
@@ -427,8 +428,8 @@ export const criarAdmin = async (req: Request, res: Response) => {
         tipo: 'admin'
       }
     })
-  } catch (error) {
-    console.error(error)
+  } catch (err) {
+    error(err)
 
     return res.status(500).json({
       erro: 'Erro interno do servidor'

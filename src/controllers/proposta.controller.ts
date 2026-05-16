@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { PropostaStatus } from '@prisma/client'
+import { error } from '../lib/logger'
 import {
   criarPropostaSchema,
   atualizarPropostaSchema,
@@ -82,7 +83,7 @@ export const criarProposta = async (req: Request, res: Response) => {
 
     return res.status(201).json(proposta)
   } catch (erro) {
-    console.error('Erro ao criar proposta:', erro)
+    error('Erro ao criar proposta:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -129,7 +130,7 @@ export const minhasPropostas = async (req: Request, res: Response) => {
       }
     })
   } catch (erro) {
-    console.error('Erro ao listar propostas:', erro)
+    error('Erro ao listar propostas:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -171,7 +172,7 @@ export const listarPropostas = async (req: Request, res: Response) => {
       }
     })
   } catch (erro) {
-    console.error('Erro ao listar propostas:', erro)
+    error('Erro ao listar propostas:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -217,7 +218,7 @@ export const atualizarMinhaProposta = async (req: Request, res: Response) => {
 
     return res.json(atualizada)
   } catch (erro) {
-    console.error('Erro ao atualizar proposta:', erro)
+    error('Erro ao atualizar proposta:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -268,7 +269,7 @@ export const patchMinhaProposta = async (req: Request, res: Response) => {
 
     return res.json(atualizada)
   } catch (erro) {
-    console.error('Erro ao atualizar proposta:', erro)
+    error('Erro ao atualizar proposta:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -300,7 +301,7 @@ export const excluirMinhaProposta = async (req: Request, res: Response) => {
     await prisma.proposta.delete({ where: { id: proposta.id } })
     return res.status(204).send()
   } catch (erro) {
-    console.error('Erro ao excluir proposta:', erro)
+    error('Erro ao excluir proposta:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -337,7 +338,7 @@ export const atualizarStatusPropostaAdmin = async (req: Request, res: Response) 
 
     return res.json(proposta)
   } catch (erro) {
-    console.error('Erro ao responder proposta:', erro)
+    error('Erro ao responder proposta:', erro)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }

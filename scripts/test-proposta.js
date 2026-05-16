@@ -2,6 +2,12 @@
 // Execute: node scripts/test-proposta.js
 
 const http = require('http');
+const logger = require('./logger')
+
+if (process.env.NODE_ENV === 'production') {
+  console.error('Não execute scripts em produção')
+  process.exit(1)
+}
 
 const BASE_URL = 'http://localhost:3001';
 
@@ -16,7 +22,7 @@ const colors = {
 };
 
 function log(color, title, message = '') {
-  console.log(`\n${color}[${title}]${colors.reset} ${message}`);
+  logger.info(`\n${color}[${title}]${colors.reset} ${message}`)
 }
 
 function makeRequest(method, path, body = null, headers = {}) {
@@ -160,7 +166,7 @@ async function runTests() {
 
   } catch (error) {
     log(colors.red, 'ERRO FATAL', error.message);
-    console.error(error);
+    logger.error(error);
     process.exit(1);
   }
 }

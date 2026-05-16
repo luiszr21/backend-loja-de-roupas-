@@ -8,6 +8,12 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger')
+
+if (process.env.NODE_ENV === 'production') {
+  console.error('Não execute scripts em produção')
+  process.exit(1)
+}
 
 const command = process.argv[2];
 const email = process.argv[3];
@@ -21,7 +27,7 @@ const colors = {
   bold: '\x1b[1m'
 };
 
-const log = (color, text) => console.log(`${color}${text}${colors.reset}`);
+const log = (color, text) => logger.info(`${color}${text}${colors.reset}`);
 
 async function promover(email) {
   try {
@@ -92,11 +98,11 @@ async function listar() {
     log(colors.cyan, `\n${colors.bold}=== Usuários Cadastrados ===${colors.reset}`);
     usuarios.forEach((u, idx) => {
       const admin = u.isAdmin ? colors.green + '👤 ADMIN' : colors.yellow + '👥 CLIENTE';
-      console.log(`\n${idx + 1}. ${admin}${colors.reset}`);
-      console.log(`   Email: ${u.email}`);
-      console.log(`   Nome: ${u.nome}`);
-      console.log(`   ID: ${u.id}`);
-      console.log(`   Criado em: ${new Date(u.criadoEm).toLocaleString('pt-BR')}`);
+      logger.info(`\n${idx + 1}. ${admin}${colors.reset}`);
+      logger.info(`   Email: ${u.email}`);
+      logger.info(`   Nome: ${u.nome}`);
+      logger.info(`   ID: ${u.id}`);
+      logger.info(`   Criado em: ${new Date(u.criadoEm).toLocaleString('pt-BR')}`);
     });
     log(colors.cyan, `\nTotal: ${usuarios.length} usuário(s)\n`);
   } catch (erro) {
@@ -121,11 +127,11 @@ async function verificar(email) {
 
     const status = usuario.isAdmin ? colors.green + 'ADMIN' : colors.yellow + 'CLIENTE';
     log(colors.cyan, `\n=== Usuário ===${colors.reset}`);
-    console.log(`Nome: ${usuario.nome}`);
-    console.log(`Email: ${usuario.email}`);
-    console.log(`Status: ${status}${colors.reset}`);
-    console.log(`ID: ${usuario.id}`);
-    console.log(`Criado em: ${new Date(usuario.criadoEm).toLocaleString('pt-BR')}\n`);
+    logger.info(`Nome: ${usuario.nome}`);
+    logger.info(`Email: ${usuario.email}`);
+    logger.info(`Status: ${status}${colors.reset}`);
+    logger.info(`ID: ${usuario.id}`);
+    logger.info(`Criado em: ${new Date(usuario.criadoEm).toLocaleString('pt-BR')}\n`);
   } catch (erro) {
     log(colors.red, `❌ Erro: ${erro.message}`);
     process.exit(1);

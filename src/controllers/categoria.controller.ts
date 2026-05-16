@@ -2,13 +2,14 @@ import { Request, Response } from 'express'
 import { Prisma } from '@prisma/client'
 import prisma from '../lib/prisma'
 import { categoriaSchema } from '../schemas/categoria.schema'
+import { error } from '../lib/logger'
 
 export const listarCategorias = async (req: Request, res: Response) => {
   try {
     const categorias = await prisma.categoria.findMany()
     return res.json(categorias)
-  } catch (error) {
-    console.error('Erro ao listar categorias:', error)
+  } catch (err) {
+    error('Erro ao listar categorias:', err)
     return res.status(500).json({ erro: 'Erro interno do servidor' })
   }
 }
@@ -23,8 +24,8 @@ export const cadastrarCategoria = async (req: Request, res: Response) => {
   try {
     const categoria = await prisma.categoria.create({ data: validacao.data })
     return res.status(201).json(categoria)
-  } catch (error) {
-    console.error('Erro ao cadastrar categoria:', error)
+  } catch (err) {
+    error('Erro ao cadastrar categoria:', err)
 
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(409).json({ erro: 'Categoria já cadastrada' })
@@ -40,8 +41,8 @@ export const removerCategoria = async (req: Request, res: Response) => {
 
     await prisma.categoria.delete({ where: { id } })
     return res.json({ mensagem: 'Categoria removida com sucesso' })
-  } catch (error) {
-    console.error('Erro ao remover categoria:', error)
+  } catch (err) {
+    error('Erro ao remover categoria:', err)
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') {
